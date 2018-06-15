@@ -9,8 +9,7 @@ from random import randint
 
 import pandas as pd
 import numpy as np
-import psycopg2
-
+import sqlite3
 
 
 #Application object
@@ -31,14 +30,21 @@ for js in external_js:
     
 	
 #Load in data:
-data_0 = [0, 1, 2, 2, 2, 3, 4]
-data_1 = [1, 1, 1, 2, 2, 2]
-
-DATABASE_URL = os.environ['ec2-50-19-232-205.compute-1.amazonaws.com']
-
-conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-
-
+def run_query(q):
+    with sqlite3.connect(DB) as conn:
+        return pd.read_sql(q,conn)
+q_test = '''
+SELECT 
+    s.chipset,
+    p.datetime,
+    p.price
+FROM gpu_specs s
+INNER JOIN gpu_prices p ON s.item_id = p.item_id
+'''
+test_table = run_query(q_test)
+test_table['datetime'] = test_table['datetime'].apply(lambda x: time.strftime('%Y-%m-%d', time.localtime(x))) 
+ten_eigties = test_table[test_table['chipset'] == 'GeForce GTX 1080 Ti']
+grouped = ten_eigties.groupby(['datetime'])['price'].mean()
 
 #App Layouts
 app.layout = html.Div(
@@ -131,11 +137,11 @@ app.layout = html.Div(
 def update_gpu_1(input_value1):
     #Filter data based on inputs
     if input_value1 == 0:
-        data = data_0
+        data = grouped
     else:
-        data = data_1
+        data = grouped
     #Plot itself
-    trace1 = go.Histogram(name = 'HISTOGRAM NAME', x=data, opacity=0.7, histnorm='probability', marker={'color':'#9999ff'}, hoverinfo="x+y+name", hoverlabel={'bgcolor':'#4d4d4d'})
+    trace1 = go.plot(name = 'PLOT NAME', x=data.index, y=data.values, opacity=0.7, marker={'color':'#9999ff'}, hoverinfo="x+y+name", hoverlabel={'bgcolor':'#4d4d4d'})
     return {
             'data':[trace1],
             'layout': {
