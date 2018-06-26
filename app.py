@@ -7,6 +7,7 @@ import plotly.graph_objs as go
 import os
 from random import randint
 
+import time	
 import pandas as pd
 import numpy as np
 import sqlite3
@@ -16,7 +17,7 @@ import sqlite3
 server = flask.Flask(__name__)
 server.secret_key = os.environ.get('secret_key', str(randint(0, 1000000)))
 app = dash.Dash(__name__, server=server)
-app.title ='APP TITLE'
+app.title ='GPU Analytics'
 
 
 #CSS and Javascript
@@ -30,21 +31,47 @@ for js in external_js:
     
 	
 #Load in data:
+DB = "gpudata.db"	
 def run_query(q):
     with sqlite3.connect(DB) as conn:
         return pd.read_sql(q,conn)
-q_test = '''
+
+#Load chipsets data into memory (chipsets without price history are excluded)
+chipsets_query = '''
 SELECT 
-    s.chipset,
-    p.datetime,
-    p.price
-FROM gpu_specs s
-INNER JOIN gpu_prices p ON s.item_id = p.item_id
+    s.chipset_id,
+    c.chipset_name
+FROM card_specs s
+INNER JOIN card_prices p ON s.card_id = p.card_id
+INNER JOIN chipsets c ON c.chipset_id = s.chipset_id
 '''
-test_table = run_query(q_test)
-test_table['datetime'] = test_table['datetime'].apply(lambda x: time.strftime('%Y-%m-%d', time.localtime(x))) 
-ten_eigties = test_table[test_table['chipset'] == 'GeForce GTX 1080 Ti']
-grouped = ten_eigties.groupby(['datetime'])['price'].mean()
+chipsets = run_query(chipsets_query).drop_duplicates().sort_values('chipset_id')
+
+#Load chipsets prices into memory	
+prices_query = '''
+SELECT 
+    s.chipset_id,
+    c.chipset_name,
+	s.manufacturer,
+    p.datetime,
+	p.merchant_id,
+	m.merchant_name,
+    p.price
+FROM card_specs s
+INNER JOIN card_prices p ON s.card_id = p.card_id
+INNER JOIN chipsets c ON c.chipset_id = s.chipset_id
+INNER JOIN merchants m ON p.merchant_id = m.merchant_id
+'''
+prices = run_query(prices_query)
+prices['datetime'] = prices['datetime'].apply(lambda x: time.strftime('%Y-%m-%d', time.localtime(x))) 
+
+manufacturers = prices['manufacturer'].drop_duplicates()
+
+merchants = run_query('SELECT * FROM merchants')
+
+specs = run_query('SELECT * FROM card_specs')
+
+benchmarks = run_query('SELECT * FROM benchmarks')
 
 #App Layouts
 app.layout = html.Div(
@@ -63,31 +90,34 @@ app.layout = html.Div(
                      html.Div(dcc.Markdown('''TEXT2''')),
                      html.Div(dcc.Markdown('''---''')),                    
                      html.Div(className='',
-                              children=[html.B('DROPDOWNTITLE:'),
+                              children=[html.B('DROPDOWNTITLE:'),						  
                      dcc.Dropdown(
                              id='input1',
-                             options=[
-							         {'label': '0', 'value': 0},
-                                     {'label': '1', 'value': 1}
+                             options=[{'label': s[0], 'value': s[1]} for s in zip(chipsets.chipset_name, chipsets.chipset_id)							   
 							         ],
-                             value=0
+                             value= 2
                              )]
                      ),
-
+                     html.Div(className='',
+                              children=[html.B('DROPDOWNTITLE:'),	
+                     dcc.Dropdown(
+                             id='input2',
+                             options=[{'label': s[0], 'value': s[1]} for s in zip(chipsets.chipset_name, chipsets.chipset_id)							   
+							         ],
+                             value= 4
+                             )]
+                     ),
                      html.Div(dcc.Markdown('''---''')),
                      
                      
                      html.Div(className='',
                               children=[html.B('RADIO TITLE:'),
-                     dcc.RadioItems(
-                             inputStyle={'display':'inline-block', 'margin-right':'5px'},
-                             labelStyle={'display':'inline-block', 'margin-right':'15px'},
-                             id='input2',
-                             options=[
-                                     {'label': 'RADIO 1', 'value': '0'},
-                                     {'label': 'RADIO 2', 'value': '1'}
+                     dcc.Dropdown(
+                             id='input4',
+                             options=[{'label': s[0], 'value': s[0]} for s in zip(manufacturers)
                                      ],
-                             value='1'
+							 multi=True,
+                             value = [i for i in manufacturers]
                              )]
                      ),
                      
@@ -95,23 +125,17 @@ app.layout = html.Div(
                       
                      html.Div(className='',
                               children=[html.B('CHECKBOX TITLE:'), 
-                     dcc.Checklist(
-                             inputStyle={'display':'inline-block', 'margin-right':'5px'},
-                             labelStyle={'display':'block', 'margin-right':'5px'},                             
+                     dcc.Dropdown(                          
                              id='input3',
-                             options=[
-                                     {'label': 'LABEL 1', 'value': '0'},
-                                     {'label': 'LABEL 2', 'value': '1'},
-                                     {'label': 'LABEL 3', 'value': '2'},
-                                     {'label': 'LABEL 4', 'value': '3'}                                    
+                             options=[{'label': s[0], 'value': s[1]} for s in zip(merchants.merchant_name, merchants.merchant_id)                                  
                                      ],
-                             values=['1', '2', '3', '4']
+							 multi=True,
+                             value=[i+1 for i in range(len(merchants))]
                              )]	
                      ),
                      
                      html.Div(dcc.Markdown('''---''')),
                      html.Div(dcc.Markdown('''Note: Use the cursor to interact with the plot. Double-click on the plot to zoom back out.''')),                      
-
             ]),
     
     #Plot elements     
@@ -119,38 +143,53 @@ app.layout = html.Div(
              children=[                     
                      html.Div(
                              className='row',
-                             children=[html.Div(dcc.Graph(id='update_gpu_1'), className='col-lg-6'),]
+                             children=[html.Div(dcc.Graph(id='update_gpu_1'), className='col-lg-12'),]
                              ),									   
 							]
 					),
                    
 			]
 	)
-])    
+])   
     
     
 #callbacks
 @app.callback(
     Output(component_id='update_gpu_1', component_property='figure'),
-    [Input(component_id='input1', component_property='value')]
-)
-def update_gpu_1(input_value1):
-    #Filter data based on inputs
-    if input_value1 == 0:
-        data = grouped
-    else:
-        data = grouped
-    #Plot itself
-    trace1 = go.plot(name = 'PLOT NAME', x=data.index, y=data.values, opacity=0.7, marker={'color':'#9999ff'}, hoverinfo="x+y+name", hoverlabel={'bgcolor':'#4d4d4d'})
-    return {
-            'data':[trace1],
-            'layout': {
-                'xaxis': {'title':'FILLERX'},
-                'yaxis': {'title':'FILLERY'},
-                'title': '<br>TITLE_GRAPH<br>HERE'
-            }
-        } 
-            
+    [Input(component_id='input1', component_property='value'),
+	Input(component_id='input2', component_property='value'),
+	Input(component_id='input3', component_property='value')])
+def update_gpu_1(input_value1, input_value2, input_value3):
+
+    #Filter data based on inputs    
+    try:    
+        result_1 = prices[(prices['chipset_id'] == input_value1) & (prices['merchant_id'].isin(input_value3))]
+        name_1 = result_1['chipset_name'].values[0]
+        data_1 = result_1.groupby(['datetime'])['price'].mean()
+	
+        result_2 = prices[(prices['chipset_id'] == input_value2) & (prices['merchant_id'].isin(input_value3))]
+        name_2 = result_2['chipset_name'].values[0]
+        data_2 = result_2.groupby(['datetime'])['price'].mean()		
+		
+        trace1 = go.Scatter(name = str(name_1), x=data_1.index, y=data_1.values, opacity=0.7, marker={'color':'#9999ff'}, hoverinfo="x+y", hoverlabel={'bgcolor':'#4d4d4d'})
+        trace2 = go.Scatter(name = str(name_2), x=data_2.index, y=data_2.values, opacity=0.7, hoverinfo="x+y", hoverlabel={'bgcolor':'#4d4d4d'})
+	
+		#Plot itself
+        return {
+                'data':[trace1, trace2],
+                'layout': {
+                    'yaxis': {'title':'Average Price (USD)'},
+                    'title': '<br>Price History Comparison<br>'
+                }
+            } 
+    except:
+        return {
+                'data':[],
+                'layout': {
+                    'yaxis': {'title':'Average Price (USD)'},
+                    'title': '<br>Price History Comparison<br>'
+                }
+            } 	
 
         
 if __name__ == '__main__':
