@@ -36,7 +36,7 @@ def run_query(q):
     with sqlite3.connect(DB) as conn:
         return pd.read_sql(q,conn)
 
-#Load chipsets data into memory (chipsets without price history are excluded) for input1
+#Load chipsets ids/names into memory (chipsets without price history/benchmarks are excluded) for input1
 chipsets_query = '''
 SELECT 
     s.chipset_id,
@@ -44,10 +44,11 @@ SELECT
 FROM card_specs s
 INNER JOIN card_prices p ON s.card_id = p.card_id
 INNER JOIN chipsets c ON c.chipset_id = s.chipset_id
+INNER JOIN benchmarks b ON b.chipset_id = c.chipset_id
 '''
 chipsets = run_query(chipsets_query).drop_duplicates().sort_values('chipset_id')
 
-#Load chipsets prices into memory	
+#Load chipset prices into memory	
 prices_query = '''
 SELECT 
     s.chipset_id,
@@ -65,17 +66,7 @@ INNER JOIN merchants m ON p.merchant_id = m.merchant_id
 prices = run_query(prices_query)
 prices['datetime'] = prices['datetime'].apply(lambda x: time.strftime('%Y-%m-%d', time.localtime(x))) 
 
-memory_query = '''
-SELECT
-    s.chipset_id,
-    c.chipset_name,
-    s.memory_in_GB
-FROM card_specs s
-INNER JOIN chipsets c ON c.chipset_id = s.chipset_id
-
-'''
-memory = run_query(memory_query)
-
+#Load chipset benchmarks into memory
 benchmarks_query = '''
 SELECT
     c.chipset_id,
@@ -88,9 +79,20 @@ INNER JOIN benchmarks b ON b.chipset_id = c.chipset_id
 '''
 benchmarks = run_query(benchmarks_query)
 
-manufacturers = prices['manufacturer'].drop_duplicates()
-merchants = run_query('SELECT * FROM merchants')
-specs = run_query('SELECT * FROM card_specs')
+#Load chipset specs into memory
+specs_query = '''
+SELECT
+    c.chipset_id,
+    c.chipset_name,
+    s.memory_in_GB,
+    s.memory_type,
+    s.tdp_in_watts,	
+    s.core_clock_in_GHz
+FROM chipsets c
+INNER JOIN card_specs s ON s.chipset_id = c.chipset_id
+
+'''
+specs = run_query(specs_query)
 
 
 
@@ -155,29 +157,29 @@ overview = html.Div(
                             ]
                         ),
                         
-                        #Row 1 graphs
+                        #Section 1 graphs
                         html.Div(
                             className='row',
                             children=[
-                                html.Div(dcc.Graph(id='update_gpu_history'), className='col-lg-8'),
-                                html.Div(dcc.Graph(id='update_gpu_price_performance'), className='col-lg-4'),  
+                                html.Div(dcc.Graph(id='update_gpu_history'), className='col-lg-12')
                             ]
                         ),
                         
-                        #Row 2 graphs
+                        #Section 2 graphs
                         html.Div(
                             className='row',
                             children=[
-                                html.Div(dcc.Graph(id='update_gpu_g3d'), className='col-lg-4'),
-                                html.Div(dcc.Graph(id='update_gpu_direct_compute'), className='col-lg-4'),                                
-                                html.Div(dcc.Graph(id='update_gpu_memory'), className='col-lg-4'),  
+                                html.Div(dcc.Graph(id='update_gpu_g3d', style={'height': '70vh'}), className='col-lg-12'),   
+                                html.Div(dcc.Graph(id='update_gpu_direct_compute', style={'height': '70vh'}), className='col-lg-12'), 
+                                html.Div(dcc.Graph(id='update_gpu_table'), className='col-lg-12')  
                             ]
                         ), 
                         
-                        #Row 3 graphs
+                        #Section 3 graphs
                         html.Div(
                             className='row',
                             children=[
+                                html.Div(dcc.Graph(id='update_gpu_price_performance'), className='col-lg-12'),
                                 html.Div(dcc.Graph(id='update_gpu_price_performance_hist'), className='col-lg-12')
                             ]
                         ),                        
@@ -237,15 +239,13 @@ noPage = html.Div([  # 404
     html.P(["404 Page not found"])
 
     ])
-
-
+	
 
 # Describe the layout, or the UI, of the app
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     html.Div(id='page-content')
 ])
-
 
 		
 #callbacks
@@ -261,7 +261,8 @@ def update_gpu_history(input1_values):
         df_filtered = prices[prices['chipset_id'] == input_value]
         name_1 = df_filtered['chipset_name'].values[0]
         data_1 = df_filtered.groupby(['datetime'])['price'].mean()		   
-        plots[str(input_value)] = go.Scatter(name = str(name_1), x=data_1.index, y=data_1.values, opacity=0.7, hoverinfo="x+y")
+        plots[str(input_value)] = go.Scatter(name = str(name_1), x=data_1.index, y=data_1.values, \
+            opacity=0.7, hoverinfo="x+y+name")
 
 	#Plot itself
     return {
@@ -269,79 +270,13 @@ def update_gpu_history(input1_values):
             'layout': {
                 'yaxis': {'title':'Average Price (USD)'},
                 'legend' : {'x' : 0.015, 'y': 0.975},
-                'title': '<br>Price History<br>'
+                'title': '<br>Price History<br>',
+                'legend': {'orientation':'h'},
+                'hoverlabel': {'namelength': 30}
             }
     } 
 
-            
-@app.callback(
-    Output(component_id='update_gpu_memory', component_property='figure'),
-    [Input(component_id='input1', component_property='value')]
-)        
-def update_gpu_memory(input1_values):        
-    plots = {}  
-    for input_value in input1_values:
-        df_filtered = memory[memory['chipset_id'] == input_value]
-        y = df_filtered['chipset_name'].values[0]
-        x = df_filtered['memory_in_GB'].mode().values[0]	      
-        plots[str(input_value)] = go.Bar(x=[x], y=[y], hoverinfo="x+y", orientation = 'h')
-    
-    #Plot itself
-    return {
-            'data':[trace for key, trace in plots.items()],
-            'layout': {
-                'xaxis': {'title':'Memory (GB)', 'tickformat': '.2f'},
-                'title': '<br>Memory<br>',
-                'showlegend' : False
-            }
-    }                
-
-    
-@app.callback(
-    Output(component_id='update_gpu_g3d', component_property='figure'),
-    [Input(component_id='input1', component_property='value')]
-)        
-def update_gpu_g3d(input1_values):        
-    plots = {}  
-    for input_value in input1_values:
-        df_filtered = benchmarks[benchmarks['chipset_id'] == input_value]
-        y = df_filtered['chipset_name'].values[0]
-        x = df_filtered['passmark_g3d'].mode().values[0]	      
-        plots[str(input_value)] = go.Bar(x=[x], y=[y], hoverinfo="x+y", orientation = 'h')
-    
-    #Plot itself
-    return {
-            'data':[trace for key, trace in plots.items()],
-            'layout': {
-                'xaxis': {'title':'Score'},
-                'title': '<br>Passmark: G3D Mark<br>',
-                'showlegend' : False
-            }
-    } 
-
-
-@app.callback(
-    Output(component_id='update_gpu_direct_compute', component_property='figure'),
-    [Input(component_id='input1', component_property='value')]
-)          
-def update_gpu_direct_compute(input1_values):        
-    plots = {}  
-    for input_value in input1_values:
-        df_filtered = benchmarks[benchmarks['chipset_id'] == input_value]
-        y = df_filtered['chipset_name'].values[0]
-        x = df_filtered['passmark_direct_compute'].values[0]	      
-        plots[str(input_value)] = go.Bar(x=[x], y=[y], hoverinfo="x+y", orientation = 'h')
-    
-    #Plot itself
-    return {
-            'data':[trace for key, trace in plots.items()],
-            'layout': {
-                'xaxis': {'title' : 'Operations per second'},
-                'title': '<br>Passmark: Direct Compute<br>',
-                'showlegend' : False
-            }
-    }
-
+	
 @app.callback(
     Output(component_id='update_gpu_price_performance', component_property='figure'),
     [Input(component_id='input1', component_property='value')]
@@ -353,18 +288,137 @@ def update_gpu_price_performance(input1_values):
         x = df_filtered['chipset_name'].values[0]
         
         current_price = prices[prices['chipset_id'] == input_value].groupby(['datetime'])['price'].mean()[-1]
-        y = df_filtered['passmark_direct_compute'].values[0]/current_price	      
-        plots[str(input_value)] = go.Bar(x=[x], y=[y], hoverinfo="x+y")
+        y = np.round(df_filtered['passmark_direct_compute'].values[0]/current_price, 2)	      
+        plots[str(input_value)] = go.Bar(x=[x], y=[y], text=[y], \
+			textfont={'color':'#ffffff'}, textposition='auto', hoverinfo="x+y")
     
     #Plot itself
     return {
             'data':[trace for key, trace in plots.items()],
             'layout': {
                 'yaxis': {'title' : 'Operations per second / USD'},
+				'xaxis': {'showticklabels' : True},
                 'title': '<br>Current Price Performance<br>',
-                'showlegend' : False
+				'showlegend' : False,
+                'margin': {'b': 40}
+            }
+    }                 
+
+    
+@app.callback(
+    Output(component_id='update_gpu_g3d', component_property='figure'),
+    [Input(component_id='input1', component_property='value')]
+)          
+def update_gpu_g3d(input1_values):        
+    plots = {}  
+    xs = []
+    names = []
+    for input_value in input1_values:
+        df_filtered = benchmarks[benchmarks['chipset_id'] == input_value]
+        y = df_filtered['chipset_name'].values[0]
+        x = df_filtered['passmark_g3d'].mode().values[0]
+        xs.append(x)
+        names.append(y)
+        plots[str(input_value)] = go.Bar(x=[x], y=[y], text=[x], \
+			textposition='outside', hoverinfo='none', orientation = 'h', cliponaxis = False)
+	
+	
+    #Plot itself
+    return {
+            'data':[trace for key, trace in plots.items()],
+            'layout': {
+                'xaxis': {'title':'', 'range':[0, max(xs)*1.15], 'showticklabels':False},
+                'title': 'Passmark: G3D Score',
+				'showlegend': False,
+                'margin' : {'l' : 13*len(max(names)), 'pad': 5, 'b': 10}
             }
     }
+	
+    
+@app.callback(
+    Output(component_id='update_gpu_direct_compute', component_property='figure'),
+    [Input(component_id='input1', component_property='value')]
+)  	
+def update_gpu_direct_compute(input1_values):        
+    plots = {}  
+    xs = []
+    names = []
+    for input_value in input1_values:
+        df_filtered = benchmarks[benchmarks['chipset_id'] == input_value]
+        y = df_filtered['chipset_name'].values[0]
+        x = df_filtered['passmark_direct_compute'].mode().values[0]
+        xs.append(x)
+        names.append(y)
+        plots[str(input_value)] = go.Bar(x=[x], y=[y], text=[x], \
+			textposition='outside', hoverinfo='none', orientation = 'h', cliponaxis = False)
+	
+	
+    #Plot itself
+    return {
+            'data':[trace for key, trace in plots.items()],
+            'layout': {
+                'xaxis': {'title':'', 'range':[0, max(xs)*1.15], 'showticklabels':False},
+                'title': '<br>Passmark: Direct Compute<br>(Operations per second)',
+				'showlegend': False,
+                'margin' : {'l' : 13*len(max(names)), 'pad': 5, 'b': 10}
+            }
+    }
+
+	
+@app.callback(
+    Output(component_id='update_gpu_table', component_property='figure'),
+    [Input(component_id='input1', component_property='value')]
+)        
+def update_gpu_table(input1_values):        
+    plots = {}
+    name = []
+    memory = []
+    memory_type = []
+    tdp = []
+    avg_core_clock = []
+    for input_value in input1_values:
+        df_filtered = specs[specs['chipset_id'] == input_value]	
+        name.append(df_filtered['chipset_name'].values[0])
+        memory.append(df_filtered['memory_in_GB'].mode().values[0])
+        memory_type.append(df_filtered['memory_type'].mode().values[0])
+        tdp.append(df_filtered['tdp_in_watts'].mode().values[0])
+        avg_core_clock.append(np.round(df_filtered['core_clock_in_GHz'].mean(), 2))
+    
+    odd = 'lightgrey'
+    even = 'white'
+    trace = go.Table(
+        header = dict(
+            values = [
+                  ['<b>Chipset Name</b>'],
+                  ['<b>Memory (GB)</b>'],
+                  ['<b>Memory Type</b>'],
+                  ['<b>Typical TDP (Watts)</b>'],
+                  ['<b>Typical Clock Speed(GHz)</b>']
+            ],
+            line = dict(color = '#ffffff', width = 1),
+            fill = dict(color = '#000000'),
+            align = ['center'],
+            font = dict(color = 'white', size = 14)
+        ),       
+        cells = dict(
+            values = [name, memory, memory_type, tdp, avg_core_clock],
+            line = dict(color = '#ffffff', width = 1),
+            align = ['left', 'center'],
+            fill = dict(color = [[even if idx%2==0 else odd for idx, i in enumerate(input1_values)]]),
+            font = dict(color = '#000000', size = 12)
+        ),
+        columnwidth = [0.4, 0.15, 0.15, 0.15, 0.15]
+    )  
+    #Plot itself
+    return {
+            'data':[trace],
+            'layout': {
+                'title': '<br>Specs<br>',
+                'margin': {'b': 0}
+            }
+    }
+	
+	
 @app.callback(
     Output(component_id='update_gpu_price_performance_hist', component_property='figure'),
     [Input(component_id='input1', component_property='value')]
@@ -380,14 +434,17 @@ def update_gpu_price_performance_hist(input1_values):
         name_1 = df_filtered_1['chipset_name'].values[0]       
         data_1 = compute_score/df_filtered_1.groupby(['datetime'])['price'].mean()
         
-        plots[str(input_value)] = go.Scatter(name = str(name_1), x=data_1.index, y=data_1.values, opacity=0.7, hoverinfo="x+y")
+        plots[str(input_value)] = go.Scatter(name = str(name_1), x=data_1.index, y=data_1.values, \
+            opacity=0.7, hoverinfo="x+y+name")
 
 	#Plot itself
     return {
             'data':[trace for key, trace in plots.items()],
             'layout': {
                 'yaxis': {'title':'Operations per second / USD'},
-                'title': '<br>Price Performance History<br>'
+                'title': '<br>Price Performance History<br>',
+                'legend': {'orientation':'h'},
+                'hoverlabel': {'namelength': 30}
             }
     }
 
