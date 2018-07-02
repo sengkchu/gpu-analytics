@@ -1,7 +1,7 @@
 from apscheduler.schedulers.blocking import BlockingScheduler
 from rq import Queue
 from worker import conn
-from gpu_scraper.py import run_all
+from gpu_scraper import run_all
 
 import logging
 import sys
