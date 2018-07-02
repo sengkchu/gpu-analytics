@@ -409,6 +409,11 @@ def scrape_benchmarks(DB = 'gpudata.db', sleep_min = 5, sleep_max = 15):
     print(no_names)  
 
 
+def run_all():
+    scrape_card_list()
+    scrape_card_page()
+    scrape_benchmarks()        
+    
 if __name__ == '__main__':
     scrape_card_list()
     scrape_card_page()
