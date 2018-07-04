@@ -150,7 +150,7 @@ overview = html.Div(
                                     id='input1',
                                     options=[{'label': s[0], 'value': s[1]} for s in zip(chipsets.chipset_name, chipsets.chipset_id)							   
 							         ],
-                                    value=[1, 7, 2, 4],
+                                    value=[1, 7, 2, 4, 8, 13, 14],
                                     multi= True
                                 ), className='col-lg-12'),
                                                                 
@@ -169,9 +169,8 @@ overview = html.Div(
                         html.Div(
                             className='row',
                             children=[
-                                html.Div(dcc.Graph(id='update_gpu_g3d', style={'height': '70vh'}), className='col-lg-12'),   
-                                html.Div(dcc.Graph(id='update_gpu_direct_compute', style={'height': '70vh'}), className='col-lg-12'), 
-                                html.Div(dcc.Graph(id='update_gpu_table'), className='col-lg-12')  
+                                html.Div(dcc.Graph(id='update_gpu_g3d', style={'height': '50vh'}), className='col-lg-8'),   
+                                html.Div(dcc.Graph(id='update_gpu_direct_compute', style={'height': '50vh'}), className='col-lg-4')  
                             ]
                         ), 
                         
@@ -179,8 +178,9 @@ overview = html.Div(
                         html.Div(
                             className='row',
                             children=[
-                                html.Div(dcc.Graph(id='update_gpu_price_performance'), className='col-lg-12'),
-                                html.Div(dcc.Graph(id='update_gpu_price_performance_hist'), className='col-lg-12')
+                                html.Div(dcc.Graph(id='update_gpu_table'), className='col-lg-12'),
+                                html.Div(dcc.Graph(id='update_gpu_price_performance_hist'), className='col-lg-8'),                       
+                                html.Div(dcc.Graph(id='update_gpu_price_performance'), className='col-lg-4')
                             ]
                         ),                        
                     ]
@@ -246,9 +246,8 @@ app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     html.Div(id='page-content')
 ])
-
 		
-#callbacks
+
 @app.callback(
     Output(component_id='update_gpu_history', component_property='figure'),
     [Input(component_id='input1', component_property='value')]
@@ -269,10 +268,10 @@ def update_gpu_history(input1_values):
             'data':[trace for key, trace in plots.items()],
             'layout': {
                 'yaxis': {'title':'Average Price (USD)'},
-                'legend' : {'x' : 0.015, 'y': 0.975},
                 'title': '<br>Price History<br>',
                 'legend': {'orientation':'h'},
-                'hoverlabel': {'namelength': 30}
+                'hoverlabel': {'namelength': 30},
+                'margin': {'r': 20, 'pad': 5}
             }
     } 
 
@@ -282,25 +281,28 @@ def update_gpu_history(input1_values):
     [Input(component_id='input1', component_property='value')]
 )          
 def update_gpu_price_performance(input1_values):        
-    plots = {}  
+    plots = {} 
+    names_len = []
     for input_value in input1_values:
         df_filtered = benchmarks[benchmarks['chipset_id'] == input_value]
         x = df_filtered['chipset_name'].values[0]
+        names_len.append(len(x))
         
         current_price = prices[prices['chipset_id'] == input_value].groupby(['datetime'])['price'].mean()[-1]
         y = np.round(df_filtered['passmark_direct_compute'].values[0]/current_price, 2)	      
         plots[str(input_value)] = go.Bar(x=[x], y=[y], text=[y], \
-			textfont={'color':'#ffffff'}, textposition='auto', hoverinfo="x+y")
+			textfont={'color':'#ffffff'}, textposition='auto', hoverinfo="x+y", \
+            cliponaxis = False)
     
     #Plot itself
     return {
             'data':[trace for key, trace in plots.items()],
             'layout': {
-                'yaxis': {'title' : 'Operations per second / USD'},
-				'xaxis': {'showticklabels' : True},
-                'title': '<br>Current Price Performance<br>',
+                'yaxis': {'title' : 'Operations per second / USD', 'showticklabels' : False},
+				'xaxis': {'showticklabels' : False},
+                'title': 'Current Price Performance',
 				'showlegend' : False,
-                'margin': {'b': 40}
+                'margin': {'l': 40, 'r': 20, 'pad': 5}
             }
     }                 
 
@@ -312,15 +314,15 @@ def update_gpu_price_performance(input1_values):
 def update_gpu_g3d(input1_values):        
     plots = {}  
     xs = []
-    names = []
+    names_len = []
     for input_value in input1_values:
         df_filtered = benchmarks[benchmarks['chipset_id'] == input_value]
         y = df_filtered['chipset_name'].values[0]
         x = df_filtered['passmark_g3d'].mode().values[0]
         xs.append(x)
-        names.append(y)
+        names_len.append(len(y))
         plots[str(input_value)] = go.Bar(x=[x], y=[y], text=[x], \
-			textposition='outside', hoverinfo='none', orientation = 'h', cliponaxis = False)
+			textposition='outside', hoverinfo='x+y', orientation = 'h', cliponaxis = False)
 	
 	
     #Plot itself
@@ -330,7 +332,7 @@ def update_gpu_g3d(input1_values):
                 'xaxis': {'title':'', 'range':[0, max(xs)*1.15], 'showticklabels':False},
                 'title': 'Passmark: G3D Score',
 				'showlegend': False,
-                'margin' : {'l' : 13*len(max(names)), 'pad': 5, 'b': 10}
+                'margin' : {'l' : 9*max(names_len), 'r':40, 'pad': 5, 'b': 10}
             }
     }
 	
@@ -342,15 +344,15 @@ def update_gpu_g3d(input1_values):
 def update_gpu_direct_compute(input1_values):        
     plots = {}  
     xs = []
-    names = []
+    names_len = []
     for input_value in input1_values:
         df_filtered = benchmarks[benchmarks['chipset_id'] == input_value]
         y = df_filtered['chipset_name'].values[0]
         x = df_filtered['passmark_direct_compute'].mode().values[0]
         xs.append(x)
-        names.append(y)
+        names_len.append(len(y))
         plots[str(input_value)] = go.Bar(x=[x], y=[y], text=[x], \
-			textposition='outside', hoverinfo='none', orientation = 'h', cliponaxis = False)
+			textposition='outside', hoverinfo='x+y', orientation = 'h', cliponaxis = False)
 	
 	
     #Plot itself
@@ -358,9 +360,10 @@ def update_gpu_direct_compute(input1_values):
             'data':[trace for key, trace in plots.items()],
             'layout': {
                 'xaxis': {'title':'', 'range':[0, max(xs)*1.15], 'showticklabels':False},
-                'title': '<br>Passmark: Direct Compute<br>(Operations per second)',
+                'title': 'Passmark: Direct Compute<br>(Operations per second)',
 				'showlegend': False,
-                'margin' : {'l' : 13*len(max(names)), 'pad': 5, 'b': 10}
+                'yaxis': {'showticklabels':False},
+                'margin' : {'l' : 0, 'r':40, 'pad': 5, 'b': 10}
             }
     }
 
@@ -414,7 +417,7 @@ def update_gpu_table(input1_values):
             'data':[trace],
             'layout': {
                 'title': '<br>Specs<br>',
-                'margin': {'b': 0}
+                'margin': {'b': 0, 'l': 20, 'r': 20}
             }
     }
 	
@@ -442,9 +445,10 @@ def update_gpu_price_performance_hist(input1_values):
             'data':[trace for key, trace in plots.items()],
             'layout': {
                 'yaxis': {'title':'Operations per second / USD'},
-                'title': '<br>Price Performance History<br>',
+                'title': 'Price Performance History',
                 'legend': {'orientation':'h'},
-                'hoverlabel': {'namelength': 30}
+                'hoverlabel': {'namelength': 30},
+                'margin' : {'r': 20}
             }
     }
 
