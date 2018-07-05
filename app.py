@@ -137,10 +137,14 @@ overview = html.Div(
                     className='col-lg-10 p-3 mb-2 bg-white text-dark',
                     children=[  
                     
-                        #Top Text
+                        #Header
                         html.Div(
-                            html.B('''Select or type in GPU(s):''')
-                        ),
+                            children=[
+                            dcc.Markdown('''## __Overview__''', className='text-center'),
+                            dcc.Markdown('''Use the drop-down menu below to add or remove GPU from the plots.
+                         Use the cursor to interact with the plot. Double-click on the plot to return to default view.'''),                             
+                            html.B('''Select or type in GPU(s):'''),                          
+                        ]),
                         
                         #Top Menus
                         html.Div(
@@ -167,7 +171,7 @@ overview = html.Div(
                         
                         #Section 2 graphs
                         html.Div(
-                            className='row',
+                            className='row col-lg-12',
                             children=[
                                 html.Div(dcc.Graph(id='update_gpu_g3d', style={'height': '50vh'}), className='col-lg-8'),   
                                 html.Div(dcc.Graph(id='update_gpu_direct_compute', style={'height': '50vh'}), className='col-lg-4')  
@@ -181,6 +185,15 @@ overview = html.Div(
                                 html.Div(dcc.Graph(id='update_gpu_table'), className='col-lg-12'),
                                 html.Div(dcc.Graph(id='update_gpu_price_performance_hist'), className='col-lg-8'),                       
                                 html.Div(dcc.Graph(id='update_gpu_price_performance'), className='col-lg-4')
+                            ]
+                        ),
+                        
+                        #Footer
+                        html.Div(
+                            className='row',
+                            children=[
+                                html.Div(dcc.Markdown('''Data source: [PCPartPicker](https://pcpartpicker.com/) 
+                                    and [PassMark](https://www.videocardbenchmark.net/)'''), className='col-lg-12')
                             ]
                         ),                        
                     ]
@@ -273,38 +286,7 @@ def update_gpu_history(input1_values):
                 'hoverlabel': {'namelength': 30},
                 'margin': {'r': 20, 'pad': 5}
             }
-    } 
-
-	
-@app.callback(
-    Output(component_id='update_gpu_price_performance', component_property='figure'),
-    [Input(component_id='input1', component_property='value')]
-)          
-def update_gpu_price_performance(input1_values):        
-    plots = {} 
-    names_len = []
-    for input_value in input1_values:
-        df_filtered = benchmarks[benchmarks['chipset_id'] == input_value]
-        x = df_filtered['chipset_name'].values[0]
-        names_len.append(len(x))
-        
-        current_price = prices[prices['chipset_id'] == input_value].groupby(['datetime'])['price'].mean()[-1]
-        y = np.round(df_filtered['passmark_direct_compute'].values[0]/current_price, 2)	      
-        plots[str(input_value)] = go.Bar(x=[x], y=[y], text=[y], \
-			textfont={'color':'#ffffff'}, textposition='auto', hoverinfo="x+y", \
-            cliponaxis = False)
-    
-    #Plot itself
-    return {
-            'data':[trace for key, trace in plots.items()],
-            'layout': {
-                'yaxis': {'title' : 'Operations per second / USD', 'showticklabels' : False},
-				'xaxis': {'showticklabels' : False},
-                'title': 'Current Price Performance',
-				'showlegend' : False,
-                'margin': {'l': 40, 'r': 20, 'pad': 5}
-            }
-    }                 
+    }           
 
     
 @app.callback(
@@ -321,8 +303,8 @@ def update_gpu_g3d(input1_values):
         x = df_filtered['passmark_g3d'].mode().values[0]
         xs.append(x)
         names_len.append(len(y))
-        plots[str(input_value)] = go.Bar(x=[x], y=[y], text=[x], \
-			textposition='outside', hoverinfo='x+y', orientation = 'h', cliponaxis = False)
+        plots[str(input_value)] = go.Bar(x=[x], y=[y], text='<b>{}</b>'.format(x), opacity = 0.7, \
+			textposition='outside', hoverinfo='none', orientation = 'h', cliponaxis = False)
 	
 	
     #Plot itself
@@ -351,8 +333,8 @@ def update_gpu_direct_compute(input1_values):
         x = df_filtered['passmark_direct_compute'].mode().values[0]
         xs.append(x)
         names_len.append(len(y))
-        plots[str(input_value)] = go.Bar(x=[x], y=[y], text=[x], \
-			textposition='outside', hoverinfo='x+y', orientation = 'h', cliponaxis = False)
+        plots[str(input_value)] = go.Bar(x=[x], y=[y], text='<b>{}</b>'.format(x), opacity = 0.7, \
+			textposition='outside', hoverinfo='none', orientation = 'h', cliponaxis = False)
 	
 	
     #Plot itself
@@ -419,7 +401,39 @@ def update_gpu_table(input1_values):
                 'title': '<br>Specs<br>',
                 'margin': {'b': 0, 'l': 20, 'r': 20}
             }
-    }
+    }    
+    
+    
+@app.callback(
+    Output(component_id='update_gpu_price_performance', component_property='figure'),
+    [Input(component_id='input1', component_property='value')]
+)          
+def update_gpu_price_performance(input1_values):        
+    plots = {} 
+    names_len = []
+    for input_value in input1_values:
+        df_filtered = benchmarks[benchmarks['chipset_id'] == input_value]
+        x = df_filtered['chipset_name'].values[0]
+        names_len.append(len(x))
+        
+        current_price = prices[prices['chipset_id'] == input_value].groupby(['datetime'])['price'].mean()[-1]
+        y = np.round(df_filtered['passmark_direct_compute'].values[0]/current_price, 2)	      
+        plots[str(input_value)] = go.Bar(x=[x], y=[y], text=[y], \
+			textfont={'color':'#ffffff'}, textposition='auto', hoverinfo="x+y", \
+            cliponaxis = False, opacity = 0.7)
+    
+    #Plot itself
+    return {
+            'data':[trace for key, trace in plots.items()],
+            'layout': {
+                'yaxis': {'title' : 'Operations per second / USD', 'showticklabels' : False},
+				'xaxis': {'showticklabels' : False},
+                'title': 'Current Price Performance',
+				'showlegend' : False,
+                'margin': {'l': 40, 'r': 20, 'pad': 5}
+            }
+    }      
+
 	
 	
 @app.callback(
