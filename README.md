@@ -6,12 +6,14 @@ Data analytics dashboard for various GPUs. This app was created with Python and 
 
 Based on a web scrape of [PCPartPicker](https://pcpartpicker.com/) and [PassMark](https://www.videocardbenchmark.net/) into a SQLite database.
 
+<center>
 ![schema](https://raw.githubusercontent.com/sengkchu/gpu-analytics/master/db_schema.png)
+</center>
 
 ### Repo Contents:
 
 + `app.py` 	The application code, contains front-end layouts, logic for graphs, SQL queries to interface with the database.
-+ `gpudata.db' SQLite database to act as the backend for the app. Designed to be small and compact (~5 MB) to fit into this repo. 
++ `gpudata.db` SQLite database to act as the backend for the app. Designed to be small and compact (~5 MB) to fit into this repo. 
 + `gpu_scraper.py` Python code for web scraping PCPartPicker and PassMark.
 + `gpudata_scraper.ipynb` IPython notebook for the web scraper.
 + `gpudatabase_interface.ipynb` IPython notebook for SQL queries.
