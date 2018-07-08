@@ -6,9 +6,9 @@ Data analytics dashboard for various GPUs. This app was created with Python and 
 
 Based on a web scrape of [PCPartPicker](https://pcpartpicker.com/) and [PassMark](https://www.videocardbenchmark.net/) into a SQLite database.
 
-<center>
-![schema](https://raw.githubusercontent.com/sengkchu/gpu-analytics/master/db_schema.png)
-</center>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/sengkchu/gpu-analytics/master/db_schema.png", alt='Schema'>
+</p>
 
 ### Repo Contents:
 
