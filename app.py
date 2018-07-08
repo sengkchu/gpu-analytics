@@ -311,7 +311,7 @@ def update_gpu_g3d(input1_values):
     return {
             'data':[trace for key, trace in plots.items()],
             'layout': {
-                'xaxis': {'title':'', 'range':[0, max(xs)*1.15], 'showticklabels':False},
+                'xaxis': {'title':'', 'range':[0, max(xs)*1.15], 'showticklabels':False, 'showgrid':False},
                 'title': 'Passmark: G3D Score',
 				'showlegend': False,
                 'margin' : {'l' : 9*max(names_len), 'r':40, 'pad': 5, 'b': 10}
@@ -341,11 +341,11 @@ def update_gpu_direct_compute(input1_values):
     return {
             'data':[trace for key, trace in plots.items()],
             'layout': {
-                'xaxis': {'title':'', 'range':[0, max(xs)*1.15], 'showticklabels':False},
+                'xaxis': {'title':'', 'range':[0, max(xs)*1.15], 'showticklabels':False, 'showgrid':False},
                 'title': 'Passmark: Direct Compute<br>(Operations per second)',
 				'showlegend': False,
                 'yaxis': {'showticklabels':False},
-                'margin' : {'l' : 0, 'r':40, 'pad': 5, 'b': 10}
+                'margin' : {'l' : 2, 'r':40, 'pad': 5, 'b': 10}
             }
     }
 
