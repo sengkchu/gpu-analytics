@@ -94,9 +94,25 @@ INNER JOIN card_specs s ON s.chipset_id = c.chipset_id
 '''
 specs = run_query(specs_query)
 
+#Load merchant data into memory
+merchants_query = '''
+SELECT
+    c.chipset_id,
+    c.chipset_name,
+    s.manufacturer,
+    p.price,
+    p.datetime,
+    m.merchant_id,
+    m.merchant_name
+FROM chipsets c
+INNER JOIN card_specs s ON s.chipset_id = c.chipset_id
+INNER JOIN card_prices p on p.card_id = s.card_id
+INNER JOIN merchants m on m.merchant_id = p.merchant_id
+'''
+merchants_df = run_query(merchants_query)
+merchants_df['datetime'] = merchants_df['datetime'].apply(lambda x: time.strftime('%Y-%m-%d', time.localtime(x))) 
 
-
-#App Layouts
+# App Layouts
 app.config.suppress_callback_exceptions = True
     
 def get_menu():
@@ -121,7 +137,7 @@ def get_menu():
     )
     return menu
     
-## Page layouts
+# Page layouts
 overview = html.Div(
     className='container-fluid',  
     children=[  
@@ -129,15 +145,15 @@ overview = html.Div(
 		    className='row', 
             children=[
             
-                #Plot dashboard                          
+                #Overview - Plot Dashboard                          
                 get_menu(),
     
-                #Plot elements     
+                #Overview - Plot Elements     
                 html.Div(
                     className='col-lg-10 p-3 mb-2 bg-white text-dark',
                     children=[  
                     
-                        #Header
+                        #Overview - Header
                         html.Div(
                             children=[
                             dcc.Markdown('''## __Overview__''', className='text-center'),
@@ -146,7 +162,7 @@ overview = html.Div(
                             html.B('''Select or type in GPU(s):'''),                          
                         ]),
                         
-                        #Top Menus
+                        #Overview - Top Menus
                         html.Div(
                             className='row',
                             children=[
@@ -161,7 +177,7 @@ overview = html.Div(
                             ]
                         ),
                         
-                        #Section 1 graphs
+                        #Overview - Section 1 graphs
                         html.Div(
                             className='row',
                             children=[
@@ -169,7 +185,7 @@ overview = html.Div(
                             ]
                         ),
                         
-                        #Section 2 graphs
+                        #Overview - Section 2 graphs
                         html.Div(
                             className='row col-lg-12',
                             children=[
@@ -178,7 +194,7 @@ overview = html.Div(
                             ]
                         ), 
                         
-                        #Section 3 graphs
+                        #Overview - Section 3 graphs
                         html.Div(
                             className='row',
                             children=[
@@ -188,14 +204,16 @@ overview = html.Div(
                             ]
                         ),
                         
-                        #Footer
+                        #Overview - Footer
                         html.Div(
                             className='row',
                             children=[
-                                html.Div(dcc.Markdown('''Data source: [PCPartPicker](https://pcpartpicker.com/) 
-                                    and [PassMark](https://www.videocardbenchmark.net/)'''), className='col-lg-12')
+                                html.Div(dcc.Markdown('''Data Source: [PCPartPicker](https://pcpartpicker.com/) 
+                                    and [PassMark](https://www.videocardbenchmark.net/)'''), className='col-lg-12'),
+                                html.Div(dcc.Markdown('''My GitHub Repo: 
+                                    [GPU Analytics](https://github.com/sengkchu/gpu-analytics)'''), className='col-lg-12'),                                    
                             ]
-                        ),                        
+                        ),                     
                     ]
                 )                   
 			]
@@ -210,14 +228,62 @@ merchants = html.Div(
 		    className='row', 
             children=[
             
-                #Plot dashboard                          
+                #Merchants - Plot dashboard                          
                 get_menu(),
     
-                #Plot elements     
+                #Merchants - Plot elements     
                 html.Div(
                     className='col-lg-10 p-3 mb-2 bg-white text-dark',
                     children=[
-                        html.P('Work In Progress')
+                    
+                        #Merchants - Header
+                        html.Div(
+                            children=[
+                            dcc.Markdown('''## __Merchant Comparison__''', className='text-center'),                       
+                            html.B('''Select or type in GPU:'''),                          
+                        ]),
+                        
+                        #Merchants - Top Menus
+                        html.Div(
+                            className='row',
+                            children=[
+                                html.Div(dcc.Dropdown(
+                                    id='input2',
+                                    options=[{'label': s[0], 'value': s[1]} for s in zip(chipsets.chipset_name, chipsets.chipset_id)							   
+							         ],
+                                    value=1,
+                                    multi= False
+                                ), className='col-lg-12'),
+                            ]
+                        ),
+                        
+                        #Merchants - Section 1 graphs
+                        html.Div(
+                            className='row',
+                            children=[
+                                html.Div(dcc.Graph(id='update_merchant_prices'), className='col-lg-12')     
+                            ]
+                        ),
+
+                        #Merchants - Description
+                        html.Div(
+                            className='row',
+                            children=[
+                                html.Div(dcc.Markdown('''__Click on the legend above to isolate trace(s), 
+                                    use the cursor or slider to zoom in, double click to zoom out__'''), className='col-lg-12 text-center')
+                            ]
+                        ),
+                        
+                        #Merchants - Footer
+                        html.Div(
+                            className='row',
+                            children=[
+                                html.Div(dcc.Markdown('''Data Source: [PCPartPicker](https://pcpartpicker.com/) 
+                                    and [PassMark](https://www.videocardbenchmark.net/)'''), className='col-lg-12'),
+                                html.Div(dcc.Markdown('''My GitHub Repo: 
+                                    [GPU Analytics](https://github.com/sengkchu/gpu-analytics)'''), className='col-lg-12'),                                    
+                            ]
+                        ),                          
                     ]
                 )                   
 			]
@@ -232,16 +298,64 @@ brands = html.Div(
 		    className='row', 
             children=[
             
-                #Plot dashboard                          
+                #Brands - Plot dashboard                          
                 get_menu(),
     
-                #Plot elements     
+                #Brands - Plot elements     
                 html.Div(
                     className='col-lg-10 p-3 mb-2 bg-white text-dark',
                     children=[
-                        html.P('Work In Progress')
+                    
+                        #Brands - Header
+                        html.Div(
+                            children=[
+                            dcc.Markdown('''## __Brand Comparison__''', className='text-center'),                       
+                            html.B('''Select or type in GPU:'''),                          
+                        ]),
+                        
+                        #Brands - Top Menus
+                        html.Div(
+                            className='row',
+                            children=[
+                                html.Div(dcc.Dropdown(
+                                    id='input3',
+                                    options=[{'label': s[0], 'value': s[1]} for s in zip(chipsets.chipset_name, chipsets.chipset_id)							   
+							         ],
+                                    value=1,
+                                    multi= False
+                                ), className='col-lg-12'),
+                            ]
+                        ),
+                        
+                        #Brands - Section 1 graphs
+                        html.Div(
+                            className='row',
+                            children=[
+                                html.Div(dcc.Graph(id='update_brand_prices'), className='col-lg-12')     
+                            ]
+                        ),
+
+                        #Brands - Description
+                        html.Div(
+                            className='row',
+                            children=[
+                                html.Div(dcc.Markdown('''__Click on the legend above to isolate trace(s), 
+                                    use the cursor or slider to zoom in, double click to zoom out__'''), className='col-lg-12 text-center')
+                            ]
+                        ),
+                        
+                        #Brands - Footer
+                        html.Div(
+                            className='row',
+                            children=[
+                                html.Div(dcc.Markdown('''Data Source: [PCPartPicker](https://pcpartpicker.com/) 
+                                    and [PassMark](https://www.videocardbenchmark.net/)'''), className='col-lg-12'),
+                                html.Div(dcc.Markdown('''My GitHub Repo: 
+                                    [GPU Analytics](https://github.com/sengkchu/gpu-analytics)'''), className='col-lg-12'),                                    
+                            ]
+                        ), 
                     ]
-                )                   
+                ),  
 			]
         )
     ]
@@ -433,7 +547,6 @@ def update_gpu_price_performance(input1_values):
                 'margin': {'l': 40, 'r': 20, 'pad': 5}
             }
     }      
-
 	
 	
 @app.callback(
@@ -465,7 +578,69 @@ def update_gpu_price_performance_hist(input1_values):
                 'margin' : {'r': 20}
             }
     }
+	
+	
+@app.callback(
+    Output(component_id='update_merchant_prices', component_property='figure'),
+    [Input(component_id='input2', component_property='value')]
+) 
+def update_merchant_prices(input2_value):
 
+    #Filter data based on inputs    
+    plots = {}
+
+    df_filtered_1 = merchants_df[merchants_df['chipset_id'] == input2_value]
+    merchant_names = df_filtered_1['merchant_name'].unique()     
+        
+    for merchant_name in merchant_names: 
+        df_filtered_2 = df_filtered_1[df_filtered_1['merchant_name'] == merchant_name]
+        data_1 = df_filtered_2.groupby(['datetime'])['price'].mean()	
+        plots[str(merchant_name)] = go.Scatter(name = str(merchant_name), x=data_1.index, y=data_1.values, \
+            opacity=0.7, hoverinfo="x+y+name")
+
+	#Plot itself
+    return {
+            'data':[trace for key, trace in plots.items()],
+            'layout': {
+                'yaxis': {'title':'Average Price (USD)'},
+                'xaxis': {'rangeslider': {}, 'type':'date'},
+                'legend': {'orientation':'h', 'y': -0.5},
+                'hoverlabel': {'namelength': 30},
+                'margin' : {'r': 40, 't': 40}
+            }
+    }
+    
+ 
+@app.callback(
+    Output(component_id='update_brand_prices', component_property='figure'),
+    [Input(component_id='input3', component_property='value')]
+) 
+def update_brand_prices(input3_value):
+
+    #Filter data based on inputs    
+    plots = {}
+
+    df_filtered_1 = merchants_df[merchants_df['chipset_id'] == input3_value]
+    brand_names = df_filtered_1['manufacturer'].unique()     
+        
+    for brand in brand_names: 
+        df_filtered_2 = df_filtered_1[df_filtered_1['manufacturer'] == brand]
+        data_1 = df_filtered_2.groupby(['datetime'])['price'].mean()	
+        plots[str(brand)] = go.Scatter(name = str(brand), x=data_1.index, y=data_1.values, \
+            opacity=0.7, hoverinfo="x+y+name")
+
+	#Plot itself
+    return {
+            'data':[trace for key, trace in plots.items()],
+            'layout': {
+                'yaxis': {'title':'Average Price (USD)'},
+                'xaxis': {'rangeslider': {}, 'type':'date'},
+                'legend': {'orientation':'h', 'y':-0.5},
+                'hoverlabel': {'namelength': 30},
+                'margin' : {'r': 40, 't': 40}
+            }
+    } 
+    
     
 # Update page
 @app.callback(Output('page-content', 'children'),
