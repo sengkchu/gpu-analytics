@@ -1,6 +1,8 @@
 # GPU Analytics
 
-Data analytics dashboard for various GPUs. This app was created with Python and Dash, hosted at [heroku.com](https://gpuanalytics.herokuapp.com).
+Data analytics dashboard for various GPUs. This app was created with Python and Dash, hosted on my website at https://gpuanalytics.codingdisciple.com/.
+
+For a static version of this app hosted on [heroku.com](https://gpuanalytics.herokuapp.com). 
 
 ![application](https://raw.githubusercontent.com/sengkchu/gpu-analytics/master/app_preview.png)
 
@@ -12,9 +14,17 @@ Based on a web scrape of [PCPartPicker](https://pcpartpicker.com/) and [PassMark
 
 ### Repo Contents:
 
++ server_files: Files used in conjunction with apache2 and wsgi to serve the app on a VPS. This folder is not required to run the application locally.
+    + appdata
+        + `gpu_scraper.py` Python script for scraping data on a VPS.
+        + `gpudata.db` Empty database file.
+        + `worker.py` Python script to run `gpu_scraper.py` every day at 00:10 Pacific time. 
+	+ `FlaskApp.conf` Configuration file to serve the application on a VPS.
+    + `FlaskApp.wsgi` WSGI file to serve the application on a VPS.
+    
 + `app.py` 	The application code, contains front-end layouts, logic for graphs, SQL queries to interface with the database.
 + `gpudata.db` SQLite database to act as the backend for the app. Designed to be small and compact (~5 MB) to fit into this repo. 
-+ `gpu_scraper.py` Python code for web scraping PCPartPicker and PassMark.
++ `gpu_scraper.py` Python code for web scraping PCPartPicker and PassMark locally
 + `gpudata_scraper.ipynb` IPython notebook for the web scraper.
 + `gpudatabase_interface.ipynb` IPython notebook for SQL queries.
 + `Procfile` for hosting on heroku only.
@@ -37,3 +47,6 @@ Based on a web scrape of [PCPartPicker](https://pcpartpicker.com/) and [PassMark
 + Install packages `pip install -r requirements.txt`.
 + Start the application `python3 app.py`.
 + Enter http://localhost:5000/ in your web browser to use the application locally.
+
+### Running the App on a VPS (Ubuntu/Digital Ocean/Cloudflare):
+Check my website for a tutorial coming soon! https://codingdisciple.com/.
