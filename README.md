@@ -2,7 +2,7 @@
 
 Data analytics dashboard for various GPUs. This app was created with Python and Dash, hosted on my website at https://gpuanalytics.codingdisciple.com/.
 
-For a static version of this app hosted on [heroku.com](https://gpuanalytics.herokuapp.com). 
+For a static version of this app hosted on heroku.com [click here](https://gpuanalytics.herokuapp.com). 
 
 ![application](https://raw.githubusercontent.com/sengkchu/gpu-analytics/master/app_preview.png)
 
@@ -19,8 +19,11 @@ Based on a web scrape of [PCPartPicker](https://pcpartpicker.com/) and [PassMark
         + `gpu_scraper.py` Python script for scraping data on a VPS.
         + `gpudata.db` Empty database file.
         + `worker.py` Python script to run `gpu_scraper.py` every day at 00:10 Pacific time. 
-	+ `FlaskApp.conf` Configuration file to serve the application on a VPS.
-    + `FlaskApp.wsgi` WSGI file to serve the application on a VPS.
+    + var/www/FlaskApp
+        + `FlaskApp.wsgi` WSGI file to serve the application on a VPS.
+        + FlaskApp 
+            + `__init__.py` The application code.
+	+ `FlaskApp.conf` Configuration file for the application.
     
 + `app.py` 	The application code, contains front-end layouts, logic for graphs, SQL queries to interface with the database.
 + `gpudata.db` SQLite database to act as the backend for the app. Designed to be small and compact (~5 MB) to fit into this repo. 
