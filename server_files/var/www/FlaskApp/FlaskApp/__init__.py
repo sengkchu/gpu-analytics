@@ -173,7 +173,7 @@ overview = html.Div(
                                     id='input1',
                                     options=[{'label': s[0], 'value': s[1]} for s in zip(chipsets.chipset_name, chipsets.chipset_id)							   
 							         ],
-                                    value=[1, 7, 2, 4, 8, 13, 14],
+                                    value=[1, 7, 2, 4, 8, 13],
                                     multi= True
                                 ), className='col-lg-12'),
                                                                 

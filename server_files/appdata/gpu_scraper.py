@@ -111,7 +111,7 @@ def scrape_card_list(DB = 'gpudata.db', sleep_min = 5, sleep_max = 15):
                 )
             except Exception as e:
                 print('Failed to add into DB for card_id: {0}, {1}'.format(card_id, e))
-                pass
+                
             
         #Provide stats for monitoring
         current_time = time.time()
@@ -214,24 +214,24 @@ def scrape_card_page(DB = 'gpudata.db', prefix = '', history_days = 730, sleep_m
                         run_inserts(DB, insert_query_merchants,[(merchant_name)])
                     except Exception as e:
                         print('Failed to add into DB for {0}, {1}'.format(merchant_name, e))
-                        pass
+                        continue
                     
                     #Updates the temp_table
                     temp_merchants_table = run_query(DB, select_query_merchants)
                 
             for date_points in merchant['data']:
-                datetime = date_points[0]
+                datetime = (date_points[0]/1000//86400) * 86400
                 price = date_points[1]
                 merchant_id = temp_merchants_table[temp_merchants_table['merchant_name'] == merchant_name]['merchant_id'].values[0]
 
                 try:
                     run_inserts(DB, insert_query_prices,(
-                        card_id, int(merchant_id), float(datetime/1000.00), float(price/100.00) 
+                        card_id, int(merchant_id), float(datetime), float(price/100.00) 
                         )
                     )
                 except Exception as e:
                     print('Failed to add into DB for card_id: {0}, datetime: {1}, merchant: {2}, {3}'.format(card_id, datetime, merchant_id, e))
-                    pass
+                    continue
                 
         #Updates the specs_table
         specs_block = html_soup.find('div', class_='specs block')
@@ -255,7 +255,6 @@ def scrape_card_page(DB = 'gpudata.db', prefix = '', history_days = 730, sleep_m
         tdp = find_specs(specs_block, 'TDP', 0)
         if ' Watts' in tdp:
             tdp_in_watts = tdp.replace(' Watts', '')
-            
         try:
             run_inserts(DB, update_query_card_specs,(
                 manufacturer, part_number, interface, memory_type, \

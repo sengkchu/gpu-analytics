@@ -29,7 +29,7 @@ Based on a web scrape of [PCPartPicker](https://pcpartpicker.com/) and [PassMark
 + `gpudata.db` SQLite database to act as the backend for the app. Designed to be small and compact (~5 MB) to fit into this repo. 
 + `gpu_scraper.py` Python code for web scraping PCPartPicker and PassMark locally
 + `gpudata_scraper.ipynb` IPython notebook for the web scraper.
-+ `gpudatabase_interface.ipynb` IPython notebook for SQL queries.
++ `gpudatabase_interface.ipynb` IPython notebook for testing out SQL queries.
 + `Procfile` for hosting on heroku only.
 + `requirements.txt` python package requirements for this application.
 
