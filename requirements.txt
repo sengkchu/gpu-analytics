@@ -9,7 +9,7 @@ dash-core-components==0.22.0
 dash-html-components==0.10.0
 dash-renderer==0.12.1
 decorator==4.2.1
-Flask==0.12.2
+Flask==1.0
 Flask-Compress==1.4.0
 gunicorn==19.7.1
 heroku==0.1.4
